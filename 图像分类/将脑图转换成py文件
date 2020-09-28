@@ -1,0 +1,24 @@
+
+#将脑图转化转成py文件
+import nibabel as nib
+import numpy as np
+import os
+
+img1_path = 'G:\data\HC2/'
+img2_path = 'G:\data\patient2/'
+save_path1 = 'G:\data\HC_PY/'
+save_path2 = 'G:\data\patient_PY/'
+
+img_name1 = os.listdir(img1_path)
+img_name2 = os.listdir(img2_path)
+
+for img_name in img_name1:
+    img = nib.load(img1_path + img_name).get_data()
+    img = np.array(img)
+    np.save(save_path1 + str(img_name).split('.')[0] + '.npy',img)
+    
+for img_name in img_name2:
+    img = nib.load(img2_path + img_name).get_data()
+    img = np.array(img)
+    np.save(save_path2 + str(img_name).split('.')[0] + '.npy',img)
+    
