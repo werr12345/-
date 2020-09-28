@@ -1,0 +1,61 @@
+import numpy as np
+import os
+
+img1_path = 'G:\data\HC_PY/'
+img2_path = 'G:\data\patient_PY/'
+sample = 133
+width  = 61
+height = 73
+depth  = 61
+count = 0
+data = np.zeros((133, 61 * 73 * 61))
+label = np.zeros((sample, 2))
+
+img1 = os.listdir(img1_path)
+img2 = os.listdir(img2_path)
+
+for img in img1:
+    # print('fsdhj')
+    mark = np.load(img1_path + img)
+    # print('sgjdkf')
+    # print(mark)
+    data[count, : ] = mark.reshape(1, width * depth * height)
+    label[count, :] = [1, 0]
+    count += 1
+
+for img in img2:
+    mark = np.load(img2_path + img)
+    data[count, :] = mark.reshape(1, width * height * depth)
+    label[count, :] = [0,1]
+    count += 1;
+
+index      = np.arange(sample, dtype=np.int32);
+inde       = np.arange(sample, dtype=np.int32)
+inde[0:6]    = index[0:6]
+inde[6:14]   = index[59:59+8]
+inde[14:20]  = index[6:12]
+inde[20:28]  = index[59+8:59+16]
+inde[28:34]  = index[12:18]
+inde[34:42]  = index[59+16:59+24]
+inde[42:48]  = index[18:24]
+inde[48:55]  = index[59+24:59+31]
+inde[55:61]  = index[24:30]
+inde[61:68]  = index[59+31:59+38]
+inde[68:74]  = index[30:36]
+inde[74:81]  = index[59+38:59+45]
+inde[81:87]  = index[36:42]
+inde[87:94]  = index[59+45:59+52]
+inde[94:100]  = index[42:43]
+inde[100:107] = index[59+52:59+59]
+inde[107:113] = index[48:54]
+inde[113:120] = index[59+59:59+66]
+inde[120:125] = index[54:59]
+inde[125:133] = index[59+66:59+74]
+
+data      = data[inde,:]
+label     = label[inde,:]
+
+np.save('G:\data\Train_data/' + 'data.npy',data)
+np.save('G:\data\Train_label/' + 'label.npy',label)
+    
+
