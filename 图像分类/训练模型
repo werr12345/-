@@ -1,0 +1,187 @@
+import tensorflow.compat.v1 as tf
+tf.disable_eager_execution()
+from sklearn.model_selection import KFold
+import numpy as np
+import matplotlib.pyplot as plt 
+
+#from mayavi import mlab
+
+
+
+sess = tf.compat.v1.InteractiveSession()
+
+data = np.load('G:\data\Train_data/' + 'data.npy')
+label = np.load('G:\data\Train_label/' + 'label.npy')
+count1 = 0;
+test_array = np.zeros(10)
+
+true_label = []
+
+def weight_variable(shape):
+    initial = tf.truncated_normal(shape, stddev = 0.1)
+    weight = tf.Variable(initial)
+    return weight
+
+def bias_variable(shape):
+    initial = tf.constant(0.1, shape = shape)
+    bias = tf.Variable(initial)
+    return bias
+
+def conv2d(in_tensor, kernel, strikes = [1, 1, 1, 1], padding = 'SAME'):
+    conv2d = tf.nn.conv2d(in_tensor, kernel, strikes, padding = padding)
+    return conv2d
+
+def max_pool_2x2(in_tensor, ksize=[1, 2, 2, 1], strike=[1, 2, 2, 1], padding='SAME'):
+    max_pool_2x2 = tf.nn.max_pool(in_tensor, ksize=ksize, padding=padding, strides=strike)
+    return max_pool_2x2
+
+
+def simple_cnn(Train_data, Train_label, Test_data, Test_label):
+    x = tf.placeholder(tf.float32, [None, 61 * 61 * 73])
+    y = tf.placeholder(tf.float32, [None, 2])
+    x_img = tf.reshape(x, [-1, 61 , 73, 61])
+    w1 = [3, 3, 61, 8]
+    b1 = [8]
+    w2 = [3, 3, 8, 16]
+    b2 = [16]
+    w3 = [3, 3, 16, 32]
+    b3 = [32]
+    w4 = [3, 3, 32, 64]
+    b4 = [64]
+    w5 = [3, 3, 64, 128]
+    b5 = [128]
+    wfc1 = [2 * 3 * 128, 256]
+    bfc1 = [256]
+    wfc2 = [256, 2]
+    bfc2 = [2]
+    num_epoch = 100;
+    batch_size = 32
+    train_size = 100;
+    w1 = weight_variable(w1)
+    b1 = bias_variable(b1)
+    conv1 = tf.nn.relu(conv2d(x_img, w1) + b1)
+    pool1 = max_pool_2x2(conv1)
+    
+    w2 = weight_variable(w2)
+    b2 = bias_variable(b2)
+    conv2 = tf.nn.relu(conv2d(pool1, w2) + b2)
+    pool2 = max_pool_2x2(conv2)
+    
+    w3 = weight_variable(w3)
+    b3 = bias_variable(b3)
+    conv3 = tf.nn.relu(conv2d(pool2, w3) + b3)
+    pool3 = max_pool_2x2(conv3)
+    
+    w4 = weight_variable(w4)
+    b4 = bias_variable(b4)
+    conv4 = tf.nn.relu(conv2d(pool3, w4) + b4)
+    pool4 = max_pool_2x2(conv4)
+    
+    w5 = weight_variable(w5)
+    b5 = bias_variable(b5)
+    conv5 = tf.nn.relu(conv2d(pool4, w5) + b5)
+    pool5 = max_pool_2x2(conv5)
+    #print('fshgfjd')
+    pool5 = tf.reshape(pool5, [-1, 2 * 3 * 128])
+    # print('fdhkjdfg')
+    wfc1 = weight_variable(wfc1)
+    bfc1 = bias_variable(bfc1)
+    #print('fdglk')
+    h_fc = tf.nn.relu(tf.matmul(pool5, wfc1) + bfc1)
+    #print('fgdsjghk')
+    keep_prob = tf.placeholder(tf.float32)
+    h_fc1_drop = tf.nn.dropout(h_fc, keep_prob)
+    #print('fgdhjfdg')
+    
+    wfc2 = weight_variable(wfc2)
+    bfc2 = bias_variable(bfc2)
+    h_fc2 = tf.nn.softmax(tf.matmul(h_fc1_drop, wfc2) + bfc2)
+    
+    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y * tf.log(h_fc2), reduction_indices=[1]))
+    train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+    
+    correct_prediction = tf.equal(tf.argmax(h_fc2, 1), tf.argmax(y, 1))
+    accuarcy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    #tf.cast改变张量的数据类型，tf.reduce_mean()函数用于计算张量tensor沿着指定的数轴（tensor的某一维度）上的平均值，主要用作降维或者计算tensor（图像）的平均值。
+    tf.global_variables_initializer().run()
+    count = 0; 
+    for i in range(num_epoch):
+        num = np.arange(train_size, dtype = np.int32)
+        np.random.shuffle(num)
+        n_epoch = num_epoch // batch_size
+        num = np.reshape(num[0:batch_size * n_epoch], (n_epoch, batch_size))
+        for j in range(n_epoch):
+            img_data = Train_data[num[j],:]
+            img_label = Train_label[num[j]]
+            count += 1
+            train_accuary = accuarcy.eval(feed_dict = {x : img_data, y : img_label, keep_prob:1.0})
+            train_loss = cross_entropy.eval(feed_dict = {x : img_data, y : img_label, keep_prob:1.0})
+           
+            
+            print('training step : %d, train_accuary %g, train_loss %g' % (count, train_accuary, train_loss))
+            train_step.run(feed_dict = {x : img_data, y : img_label, keep_prob:0.5})
+            # if i >= 90:
+                # print('i == %d' % i)
+    
+    test_accuary = accuarcy.eval(feed_dict = {x : Test_data, y : Test_label, keep_prob:1.0})
+    test_loss = cross_entropy.eval(feed_dict = {x : Test_data, y : Test_label, keep_prob:1.0})
+    test_pred = h_fc2.eval(feed_dict = {x : Test_data, y : Test_label, keep_prob:1.0})
+    # test_correct_prediction = correct_prediction.eval(feed_dict = {x : Test_data, y : Test_label, keep_prob:1.0})
+        
+    # global count1
+    # test_array[count1] = test_accuary
+    print('test step : %d, test_accuary %g, test_loss %g' % (count1, test_accuary, test_loss))
+    # count1 += 1
+    return test_accuary, test_loss, test_pred
+            
+    
+def main():
+    kf = KFold(n_splits = 10)
+    
+    KFold(n_splits=10, random_state=None, shuffle=True)
+    TestLabel = np.zeros([data.shape[0],2])
+    TestAccuary = np.zeros([10])
+    TestPred = np.zeros([data.shape[0],2]) 
+    fold_num = 0
+    for train_index, test_index in kf.split(data):
+        Train_data, Train_label = data[train_index], label[train_index]
+        Test_data, Test_label = data[test_index], label[test_index]
+        test_accuary, _, test_pred = simple_cnn(Train_data, Train_label, Test_data, Test_label)
+        TestLabel[test_index,:] = Test_label
+        TestAccuary[fold_num] = test_accuary
+        TestPred[test_index,:] = test_pred
+        print('fold num : %d, test_accuary %g' % (fold_num, test_accuary))
+        fold_num += 1
+    np.save('G:/data/ep_cnn_result/TestLabel.npy',TestLabel)
+    np.save('G:/data/ep_cnn_result/TestAccuary.npy',TestAccuary)
+    np.save('G:/data/ep_cnn_result/TestPred.npy',TestPred)
+    
+        
+        
+        
+    test_array =  np.load('G:/data/ep_cnn_result/TestAccuary.npy') 
+    x = np.linspace(1, 10, 10)
+    y = np.mean(test_array)
+    y = np.array([y,y,y,y,y,y,y,y,y,y])
+    plt.rcParams['font.sans-serif']=['SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.plot(x, test_array, ls="-", lw=2,color='skyblue' ,label="每一折的准确率")
+    plt.plot(x,y, ls="-", lw=2, color='orangered',label="平均准确率")
+    plt.xlabel('折数',fontsize=20)
+    plt.ylabel('准确率',fontsize=20)
+    plt.ylim(0, 1)
+    plt.legend(fontsize=20)
+    #plt.savefig(path_model+'result/accuracy.png', dpi=1080)
+    plt.show()
+    # print(np.sum(accuracy_total)/10)
+    print(np.mean(test_array))
+        
+if __name__ == '__main__':
+    main()
+    
+    
+    
+    
+    
+    
+    
